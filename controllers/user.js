@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt-nodejs");
 const jwt = require("../services/jwt");
 const User = require("../models/user");
+const fs = require("fs");
+const path = require("path");
 
 function signUp(req, res){
     const user = new User();
@@ -77,7 +79,96 @@ function signIn(req, res){
     } )
 }
 
+function getUsers(req, res){
+    User.find().then(users => {
+        if(!users){
+            res.status(404).send({message: "User no found" });
+        }else{
+            res.status(200).send({users});
+        }
+    })
+}
+
+function uploadAvatar(req, res){
+    const params = req.params;
+
+    User.findById({_id: params.id}, (err , userData) => {
+        if(err){
+            res.status(500).send({message: "Error del servidor"});
+        } else {
+            if(!userData){
+                res.status(404).send({message: "User not found"});
+            }else{
+                let user = userData;
+                
+                if(req.files){
+                    let filePath = req.files.avatar.path;
+                    let fileSplit = filePath.split("\\");
+                    let fileName = fileSplit[2];
+                    let extSplit = fileName.split(".");
+                    let fileExt = extSplit[1];
+
+                    if(fileExt !== "png" && fileExt !== "jpg"){
+                        res.status(400).send({
+                            message: "image is not valid"
+                        })
+                    }else{
+                        user.avatar = fileName;
+                        User.findByIdAndUpdate({_id: params.id}, user, (error , userResult) => {
+                            if(error){
+                                res.status(500).send({message: "server error"});
+                            }else{
+                                if(!userResult){
+                                    res.status(404).send({message: "user not found"});
+                                }else{
+                                    res.status(200).send({avatarName: fileName})
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+        }
+    })
+}
+
+function getAvatar(req, res){
+    const avatarName = req.params.avatarName;
+    const filePath = "./uploads/avatar/"+ avatarName;
+
+    fs.exists(filePath, exists => {
+        console.log(filePath);
+        if(!exists){
+            res.status(404).send({message: "Avatar not found"});
+        }else{
+            res.sendFile(path.resolve(filePath));
+        }
+    });
+
+}
+
+function updateUser(req, res){
+    const userData = req.body;
+    const params = req.params;
+
+    User.findByIdAndUpdate({ _id: params.id }, userData, (error, userUpdate) => {
+        if(error){
+            res.status(500).send({message: "server error"});
+        }else{
+            if(!userUpdate){
+                res.status(404).send({message: "user not found"});
+            }else{
+                res.status(200).send({message: "user update successfully"});
+            }
+        }
+    })
+}
+
 module.exports = {
+    getUsers,
     signUp,
-    signIn
+    signIn,
+    uploadAvatar,
+    getAvatar,
+    updateUser
 };

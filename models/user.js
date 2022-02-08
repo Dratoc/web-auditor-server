@@ -11,7 +11,8 @@ const UserSchame = Schema (
         password: String,
         role: String,
         active: Boolean,
-        remember: Boolean 
+        remember: Boolean, 
+        avatar: String
     }
 )
 
